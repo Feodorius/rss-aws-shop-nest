@@ -1,5 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { products } from '../data/products';
+import { GetCommand } from '@aws-sdk/lib-dynamodb';
+import { docClient } from '../db/dynamodb';
+import { Product, Stock } from '../types/product';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -8,20 +10,44 @@ const headers = {
 };
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  const productId = event.pathParameters?.productId;
-  const product = products.find((p) => p.id === productId);
+  console.log('getProductsById event:', JSON.stringify(event));
 
-  if (!product) {
+  const productId = event.pathParameters?.productId;
+
+  try {
+    const [productResult, stockResult] = await Promise.all([
+      docClient.send(new GetCommand({
+        TableName: process.env.PRODUCTS_TABLE,
+        Key: { id: productId },
+      })),
+      docClient.send(new GetCommand({
+        TableName: process.env.STOCKS_TABLE,
+        Key: { product_id: productId },
+      })),
+    ]);
+
+    if (!productResult.Item) {
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ message: `Product with id "${productId}" not found` }),
+      };
+    }
+
+    const product = productResult.Item as Product;
+    const stock = stockResult.Item as Stock | undefined;
+
     return {
-      statusCode: 404,
+      statusCode: 200,
       headers,
-      body: JSON.stringify({ message: `Product with id "${productId}" not found` }),
+      body: JSON.stringify({ ...product, count: stock?.count ?? 0 }),
+    };
+  } catch (error) {
+    console.error('getProductsById error:', error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ message: 'Internal server error' }),
     };
   }
-
-  return {
-    statusCode: 200,
-    headers,
-    body: JSON.stringify(product),
-  };
 };
