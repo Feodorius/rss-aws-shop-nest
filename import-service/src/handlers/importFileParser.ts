@@ -1,8 +1,10 @@
 import { S3Event } from 'aws-lambda';
 import { GetObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { SendMessageCommand } from '@aws-sdk/client-sqs';
 import { Readable } from 'stream';
 import csv from 'csv-parser';
 import { s3Client } from '../db/s3';
+import { sqsClient } from '../db/sqs';
 
 const REQUIRED_FIELDS = ['title', 'price', 'count'];
 
@@ -25,6 +27,8 @@ export const handler = async (event: S3Event): Promise<void> => {
       throw new Error(`Empty body for object ${key}`);
     }
 
+    const validRecords: Record<string, string>[] = [];
+
     await new Promise<void>((resolve, reject) => {
       (getResponse.Body as Readable)
         .pipe(csv())
@@ -33,11 +37,20 @@ export const handler = async (event: S3Event): Promise<void> => {
             console.warn('Skipping invalid record (missing required fields):', JSON.stringify(data));
             return;
           }
-          console.log('Parsed record:', JSON.stringify(data));
+          validRecords.push(data);
         })
         .on('end', resolve)
         .on('error', reject);
     });
+
+    for (const csvRecord of validRecords) {
+      await sqsClient.send(
+        new SendMessageCommand({
+          QueueUrl: process.env.SQS_QUEUE_URL!,
+          MessageBody: JSON.stringify(csvRecord),
+        }),
+      );
+    }
 
     const parsedKey = key.replace('uploaded/', 'parsed/');
 

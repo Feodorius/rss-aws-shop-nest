@@ -3,6 +3,7 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
@@ -14,6 +15,12 @@ export class ImportServiceStack extends cdk.Stack {
     super(scope, id, props);
 
     const bucket = s3.Bucket.fromBucketArn(this, 'ImportBucket', BUCKET_ARN);
+
+    const catalogItemsQueue = sqs.Queue.fromQueueArn(
+      this,
+      'CatalogItemsQueue',
+      cdk.Fn.importValue('CatalogItemsQueueArn'),
+    );
 
     const importProductsFile = new NodejsFunction(this, 'ImportProductsFileFunction', {
       runtime: lambda.Runtime.NODEJS_22_X,
@@ -30,11 +37,13 @@ export class ImportServiceStack extends cdk.Stack {
       entry: path.join(__dirname, '../src/handlers/importFileParser.ts'),
       environment: {
         BUCKET_NAME: bucket.bucketName,
+        SQS_QUEUE_URL: catalogItemsQueue.queueUrl,
       },
     });
 
     bucket.grantPut(importProductsFile);
     bucket.grantReadWrite(importFileParser);
+    catalogItemsQueue.grantSendMessages(importFileParser);
 
     bucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
