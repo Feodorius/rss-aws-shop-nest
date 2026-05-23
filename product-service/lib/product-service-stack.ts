@@ -2,6 +2,11 @@ import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
@@ -21,6 +26,31 @@ export class ProductServiceStack extends cdk.Stack {
       partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
+
+    const catalogItemsQueue = new sqs.Queue(this, 'CatalogItemsQueue', {
+      queueName: 'catalogItemsQueue',
+    });
+
+    const createProductTopic = new sns.Topic(this, 'CreateProductTopic', {
+      topicName: 'createProductTopic',
+    });
+
+    const emailPrimary = ssm.StringParameter.valueFromLookup(this, '/shop/sns-email-primary');
+    const emailFiltered = ssm.StringParameter.valueFromLookup(this, '/shop/sns-email-filtered');
+
+    createProductTopic.addSubscription(
+      new snsSubscriptions.EmailSubscription(emailPrimary),
+    );
+
+    createProductTopic.addSubscription(
+      new snsSubscriptions.EmailSubscription(emailFiltered, {
+        filterPolicy: {
+          price: sns.SubscriptionFilter.numericFilter({
+            greaterThan: 100,
+          }),
+        },
+      }),
+    );
 
     const commonEnv = {
       PRODUCTS_TABLE: productsTable.tableName,
@@ -48,12 +78,29 @@ export class ProductServiceStack extends cdk.Stack {
       environment: commonEnv,
     });
 
+    const catalogBatchProcess = new NodejsFunction(this, 'CatalogBatchProcessFunction', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'handler',
+      entry: path.join(__dirname, '../src/handlers/catalogBatchProcess.ts'),
+      environment: {
+        ...commonEnv,
+        SNS_TOPIC_ARN: createProductTopic.topicArn,
+      },
+    });
+
     productsTable.grantReadData(getProductsList);
     stocksTable.grantReadData(getProductsList);
     productsTable.grantReadData(getProductsById);
     stocksTable.grantReadData(getProductsById);
     productsTable.grantWriteData(createProduct);
     stocksTable.grantWriteData(createProduct);
+    productsTable.grantWriteData(catalogBatchProcess);
+    stocksTable.grantWriteData(catalogBatchProcess);
+    createProductTopic.grantPublish(catalogBatchProcess);
+
+    catalogBatchProcess.addEventSource(
+      new lambdaEventSources.SqsEventSource(catalogItemsQueue, { batchSize: 5 }),
+    );
 
     const api = new apigateway.RestApi(this, 'ProductServiceApi', {
       restApiName: 'Product Service API',
@@ -74,6 +121,16 @@ export class ProductServiceStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: api.url,
       description: 'Product Service API URL',
+    });
+
+    new cdk.CfnOutput(this, 'CatalogItemsQueueArn', {
+      value: catalogItemsQueue.queueArn,
+      exportName: 'CatalogItemsQueueArn',
+    });
+
+    new cdk.CfnOutput(this, 'CatalogItemsQueueUrl', {
+      value: catalogItemsQueue.queueUrl,
+      exportName: 'CatalogItemsQueueUrl',
     });
   }
 }
