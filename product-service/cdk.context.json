@@ -1,0 +1,4 @@
+{
+  "ssm:account=404894125945:parameterName=/shop/sns-email-primary:region=eu-north-1": "fkaputsky@mail.ru",
+  "ssm:account=404894125945:parameterName=/shop/sns-email-filtered:region=eu-north-1": "wedster@mail.ru"
+}

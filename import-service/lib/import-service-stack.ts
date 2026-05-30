@@ -51,6 +51,18 @@ export class ImportServiceStack extends cdk.Stack {
       { prefix: 'uploaded/' },
     );
 
+    const basicAuthorizerArn = cdk.Fn.importValue('BasicAuthorizerArn');
+    const basicAuthorizerFn = lambda.Function.fromFunctionArn(
+      this,
+      'BasicAuthorizerFn',
+      basicAuthorizerArn,
+    );
+
+    const authorizer = new apigateway.TokenAuthorizer(this, 'BasicTokenAuthorizer', {
+      handler: basicAuthorizerFn,
+      identitySource: apigateway.IdentitySource.header('Authorization'),
+    });
+
     const api = new apigateway.RestApi(this, 'ImportServiceApi', {
       restApiName: 'Import Service API',
       defaultCorsPreflightOptions: {
@@ -60,11 +72,31 @@ export class ImportServiceStack extends cdk.Stack {
       },
     });
 
+    api.addGatewayResponse('UnauthorizedResponse', {
+      type: apigateway.ResponseType.UNAUTHORIZED,
+      statusCode: '401',
+      responseHeaders: {
+        'Access-Control-Allow-Origin': "'*'",
+        'Access-Control-Allow-Headers': "'Content-Type,Authorization'",
+      },
+    });
+
+    api.addGatewayResponse('AccessDeniedResponse', {
+      type: apigateway.ResponseType.ACCESS_DENIED,
+      statusCode: '403',
+      responseHeaders: {
+        'Access-Control-Allow-Origin': "'*'",
+        'Access-Control-Allow-Headers': "'Content-Type,Authorization'",
+      },
+    });
+
     const importResource = api.root.addResource('import');
     importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFile), {
       requestParameters: {
         'method.request.querystring.name': true,
       },
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
     new cdk.CfnOutput(this, 'ApiUrl', {
