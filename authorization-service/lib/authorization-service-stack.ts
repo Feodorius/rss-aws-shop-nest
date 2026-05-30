@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
@@ -16,6 +17,11 @@ export class AuthorizationServiceStack extends cdk.Stack {
       handler: 'handler',
       entry: path.join(__dirname, '../src/handlers/basicAuthorizer.ts'),
       environment: envVars,
+    });
+
+    basicAuthorizer.addPermission('AllowApiGatewayInvoke', {
+      principal: new iam.ServicePrincipal('apigateway.amazonaws.com'),
+      action: 'lambda:InvokeFunction',
     });
 
     new cdk.CfnOutput(this, 'BasicAuthorizerArn', {
