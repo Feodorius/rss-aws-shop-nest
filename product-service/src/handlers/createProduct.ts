@@ -8,12 +8,13 @@ const headers = {
   'Content-Type': 'application/json',
 };
 
-function isValidProductBody(body: unknown): body is { title: string; description?: string; price: number; count: number } {
+function isValidProductBody(body: unknown): body is { title: string; description?: string; price: number; count: number; image?: string } {
   if (!body || typeof body !== 'object') return false;
   const b = body as Record<string, unknown>;
   if (!b.title || typeof b.title !== 'string' || b.title.trim() === '') return false;
   if (typeof b.price !== 'number' || b.price < 0) return false;
   if (typeof b.count !== 'number' || b.count < 0 || !Number.isInteger(b.count)) return false;
+  if (b.image !== undefined && (typeof b.image !== 'string' || b.image.trim() === '')) return false;
   return true;
 }
 
@@ -41,7 +42,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     };
   }
 
-  const { title, description = '', price, count } = body;
+  const { title, description = '', price, count, image } = body;
   const id = crypto.randomUUID();
 
   try {
@@ -51,7 +52,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           {
             Put: {
               TableName: process.env.PRODUCTS_TABLE,
-              Item: { id, title, description, price },
+              Item: { id, title, description, price, ...(image ? { image } : {}) },
             },
           },
           {
@@ -67,7 +68,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return {
       statusCode: 201,
       headers,
-      body: JSON.stringify({ id, title, description, price, count }),
+      body: JSON.stringify({ id, title, description, price, count, ...(image ? { image } : {}) }),
     };
   } catch (error) {
     console.error('createProduct error:', error);
