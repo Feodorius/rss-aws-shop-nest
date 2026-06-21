@@ -1,0 +1,23 @@
+# Build artefacts - rebuilt inside the image
+node_modules
+dist
+
+# Local secrets - injected via `eb setenv` on Elastic Beanstalk instead
+.env
+.env.*
+
+# VCS metadata - not needed at runtime
+.git
+.gitignore
+
+# EB CLI workspace - not relevant inside the container
+.elasticbeanstalk
+
+# Docs & tests - keep the image lean
+README.md
+test
+*.spec.ts
+
+# Editor configuration
+.idea
+.vscode

@@ -1,0 +1,20 @@
+# When this file exists, the EB CLI bundles the workspace by walking the file
+# system instead of using git tracking — needed because our VPC override in
+# .ebextensions/ has not been committed yet. Mirrors .dockerignore plus a few
+# extra patterns that only make sense for the EB upload.
+
+node_modules
+dist
+.env
+.env.*
+.git
+.gitignore
+.vscode
+.idea
+test
+*.spec.ts
+*.log
+.DS_Store
+
+# Build-time only — image is built on the EB instance from the Dockerfile.
+# (We're not pushing a pre-built image.)
