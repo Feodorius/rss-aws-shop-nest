@@ -50,7 +50,7 @@ export class ProxyService {
     const method = (req.method || 'GET').toUpperCase();
     const body = BODYLESS_METHODS.has(method)
       ? undefined
-      : (req.body as Buffer | string | undefined);
+      : this.normalizeBody(req.body, headers);
 
     this.logger.log(`-> ${method} ${target}`);
 
@@ -82,6 +82,20 @@ export class ProxyService {
       this.logger.error(`${target} -> ${message}`);
       await res.status(502).send({ message: 'Upstream unavailable' });
     }
+  }
+  
+  private normalizeBody(
+    rawBody: unknown,
+    headers: Record<string, string>,
+  ): Buffer | string | undefined {
+    if (rawBody === undefined || rawBody === null) return undefined;
+    if (Buffer.isBuffer(rawBody)) return rawBody;
+    if (typeof rawBody === 'string') return rawBody;
+    // Object / array — Fastify (or a Nest pipe) already parsed it. Serialize
+    // back to JSON, otherwise undici rejects it.
+    const json = JSON.stringify(rawBody);
+    if (!headers['content-type']) headers['content-type'] = 'application/json';
+    return json;
   }
 
   /**
