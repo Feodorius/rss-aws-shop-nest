@@ -7,6 +7,7 @@ export const products: ProductWithStock[] = [
     id: '7567ec4b-b10c-48c5-9345-fc73c48a80aa',
     price: 2.4,
     title: 'ProductOne',
+    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600',
   },
   {
     count: 6,
@@ -14,6 +15,7 @@ export const products: ProductWithStock[] = [
     id: '7567ec4b-b10c-48c5-9345-fc73c48a80a0',
     price: 10,
     title: 'ProductNew',
+    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600',
   },
   {
     count: 7,
@@ -21,6 +23,7 @@ export const products: ProductWithStock[] = [
     id: '7567ec4b-b10c-48c5-9345-fc73c48a80a2',
     price: 23,
     title: 'ProductTop',
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600',
   },
   {
     count: 12,
@@ -28,6 +31,7 @@ export const products: ProductWithStock[] = [
     id: '7567ec4b-b10c-48c5-9345-fc73c48a80a1',
     price: 15,
     title: 'ProductTitle',
+    image: 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=600',
   },
   {
     count: 7,
@@ -35,6 +39,7 @@ export const products: ProductWithStock[] = [
     id: '7567ec4b-b10c-48c5-9345-fc73c48a80a3',
     price: 23,
     title: 'Product',
+    image: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600',
   },
   {
     count: 8,
@@ -42,6 +47,7 @@ export const products: ProductWithStock[] = [
     id: '7567ec4b-b10c-48c5-9345-fc73348a80a1',
     price: 15,
     title: 'ProductTest',
+    image: 'https://images.unsplash.com/photo-1491637639811-60e2756cc1c7?w=600',
   },
   {
     count: 2,
@@ -49,6 +55,7 @@ export const products: ProductWithStock[] = [
     id: '7567ec4b-b10c-48c5-9445-fc73c48a80a2',
     price: 23,
     title: 'Product2',
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600',
   },
   {
     count: 3,
@@ -56,5 +63,6 @@ export const products: ProductWithStock[] = [
     id: '7567ec4b-b10c-45c5-9345-fc73c48a80a1',
     price: 15,
     title: 'ProductName',
+    image: 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=600',
   },
 ];
